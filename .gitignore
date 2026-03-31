@@ -12,3 +12,4 @@ wheels/
 
 app/sessions/*
 app/data/*
+.env
