@@ -1,20 +1,16 @@
+import argparse
 import csv
 import logging
 import os
+
+from dotenv import load_dotenv
 from camoufox.sync_api import Camoufox
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
-
+load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SESSION_PATH = os.path.join(BASE_DIR, "sessions", "session.json")
-RESULTS_PATH = os.path.join(BASE_DIR, "data", "results.csv")
-SEARCH_QUERY = "restaurants in New York"
-GOOGLE_MAPS_URL = f"https://www.google.com/maps/search/{SEARCH_QUERY.replace(' ', '+')}"
+RESULTS_DIR = os.path.join(BASE_DIR, "data")
 
 CSV_FIELDS = [
     "name",
@@ -139,27 +135,63 @@ def scrape_all_places(browser, page, urls):
     return results
 
 
-def save_to_csv(results):
-    with open(RESULTS_PATH, "w", newline="", encoding="utf-8") as f:
+def save_to_csv(results, query):
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    filename = query.replace(" ", "_").lower() + ".csv"
+    filepath = os.path.join(RESULTS_DIR, filename)
+    with open(filepath, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         writer.writeheader()
         writer.writerows(results)
-    logging.info(f"Saved {len(results)} places to {RESULTS_PATH}")
+    logging.info(f"Saved {len(results)} places to {filepath}")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Google Maps Scraper")
+    parser.add_argument(
+        "-q", "--query",
+        default=os.getenv("SEARCH_QUERY", "restaurants in New York"),
+        help="Search query (default: from .env or 'restaurants in New York')",
+    )
+    parser.add_argument(
+        "--headless",
+        default=os.getenv("HEADLESS", "true").lower() == "true",
+        action=argparse.BooleanOptionalAction,
+        help="Run browser in headless mode (default: from .env or true)",
+    )
+    parser.add_argument(
+        "--log-level",
+        default=os.getenv("LOG_LEVEL", "DEBUG"),
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level (default: from .env or DEBUG)",
+    )
+    return parser.parse_args()
 
 
 def main():
-    logging.info(f"Starting Google Maps scraper for: '{SEARCH_QUERY}'")
-    logging.info(f"URL: {GOOGLE_MAPS_URL}")
+    args = parse_args()
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    query = args.query
+    url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}"
+
+    logging.info(f"Starting Google Maps scraper for: '{query}'")
+    logging.info(f"URL: {url}")
     os.makedirs(os.path.dirname(SESSION_PATH), exist_ok=True)
 
-    with Camoufox(headless=True) as browser:
+    with Camoufox(headless=args.headless) as browser:
         logging.info("Browser launched")
         page = browser.new_page(
             storage_state=SESSION_PATH if os.path.exists(SESSION_PATH) else None,
             viewport={"width": 1920, "height": 1080},
         )
         logging.info("Navigating to Google Maps...")
-        page.goto(GOOGLE_MAPS_URL, wait_until="domcontentloaded")
+        page.goto(url, wait_until="domcontentloaded")
         logging.info("Page loaded")
         check_for_cookie_consent(page)
         page.wait_for_timeout(2000)
@@ -167,9 +199,7 @@ def main():
 
         urls = collect_place_urls(page)
         results = scrape_all_places(browser, page, urls)
-        save_to_csv(results)
-
-        input("\nPress Enter to close the browser...")
+        save_to_csv(results, query)
 
 
 if __name__ == "__main__":
