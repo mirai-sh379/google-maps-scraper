@@ -11,3 +11,4 @@ wheels/
 
 
 app/sessions/*
+app/data/*
