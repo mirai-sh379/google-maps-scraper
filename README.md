@@ -18,7 +18,6 @@
 
 - [Overview](#-overview)
 - [Features](#-features)
-- [Demo](#-demo)
 - [How It Works](#-how-it-works)
 - [Extracted Data](#-extracted-data)
 - [Tech Stack](#-tech-stack)
@@ -56,20 +55,6 @@ that breaks naïve scrapers.
 - 🔁 **Crash-resilient scraping** — recovers and continues if a single page fails
 - 🪵 **Configurable logging** — `DEBUG` → `ERROR`, so you see exactly what's happening
 - 📊 **Clean CSV export** — one tidy file per query, UTF-8 encoded
-
----
-
-## 🎬 Demo
-
-<div align="center">
-
-<!-- 📌 TIP: record a short GIF of a run and drop it here for maximum impact.
-     Save it as docs/demo.gif and uncomment the line below. -->
-<!-- <img src="docs/demo.gif" alt="Google Maps Extractor in action" width="800"> -->
-
-> _Add a screenshot or GIF of the scraper running to make this section pop._
-
-</div>
 
 ---
 
